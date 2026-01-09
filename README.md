@@ -6,7 +6,7 @@ An Autonomous Research Agent that accelerates scientific discovery. Ingests real
 
 ## Project Status
 
-### Phase 1: Data Ingestion Pipeline - ✅ Completed (Refactored)
+### Phase 1: Data Ingestion Pipeline
 - **Architecture:** Apache Airflow + PostgreSQL
 - Modular project structure
 - Docker-based infrastructure (Airflow, PostgreSQL, Qdrant)
