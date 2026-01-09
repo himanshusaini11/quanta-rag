@@ -1,0 +1,7 @@
+arxiv
+pypdf
+pymongo
+aiohttp
+python-dotenv
+loguru
+tqdm
