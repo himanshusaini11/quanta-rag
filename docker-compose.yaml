@@ -2,8 +2,7 @@ version: '3.8'
 
 x-airflow-common:
   &airflow-common
-  # image: apache/airflow:2.8.0-python3.10  <-- DELETE THIS LINE
-  build: .                                    # <-- ADD THIS LINE
+  build: .
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -13,7 +12,9 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     DATABASE_URL: postgresql://quanta:quanta@postgres:5432/quanta_rag
-    # _PIP_ADDITIONAL_REQUIREMENTS: ...       <-- DELETE THIS LINE
+    # ADD THESE FOR PHASE 3
+    OPENSEARCH_HOST: http://opensearch:9200
+    QDRANT_HOST: http://qdrant:6333
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
@@ -65,11 +66,6 @@ services:
     <<: *airflow-common
     container_name: quanta-airflow-scheduler
     command: scheduler
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-      interval: 10s
-      timeout: 10s
-      retries: 5
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
@@ -85,19 +81,11 @@ services:
       - |
         mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
         airflow db init
-        airflow users create \
-          --username admin \
-          --firstname Admin \
-          --lastname User \
-          --role Admin \
-          --email admin@example.com \
-          --password admin
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_UPGRADE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -108,8 +96,25 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
 
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
-    driver: local
   qdrant_data:
-    driver: local
+  opensearch_data:

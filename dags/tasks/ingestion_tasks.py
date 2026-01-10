@@ -266,3 +266,45 @@ def store_to_db_task(data: Dict[str, Any], **kwargs) -> bool:
     except Exception as e:
         logger.error(f"Error storing {arxiv_id}: {e}")
         raise
+
+
+def index_papers_task(**kwargs):
+    from src.services.opensearch.client import QuantaSearchClient
+    from src.database.models import Paper
+    from src.database.session import DatabaseSession
+    from loguru import logger
+
+    search_client = QuantaSearchClient()
+    DatabaseSession.initialize()
+    
+    paper_list = []
+    
+    # 1. Open Session and fetch data
+    with DatabaseSession.session_scope() as session:
+        papers = session.query(Paper).all()
+        
+        # 2. IMMEDIATELY convert to dictionaries while session is active
+        # This prevents DetachedInstanceError
+        for paper in papers:
+            paper_list.append({
+                "arxiv_id": paper.arxiv_id,
+                "title": paper.title,
+                "summary": paper.summary,
+                "full_text": paper.full_text,
+                "published_date": paper.published_date.isoformat() if paper.published_date else None
+            })
+    
+    # 3. Now that the session is closed, the 'paper_list' is safe to use
+    if not paper_list:
+        logger.warning("No papers found in DB to index.")
+        return "No data"
+
+    for paper_data in paper_list:
+        try:
+            search_client.upsert_paper(paper_data)
+        except Exception as e:
+            logger.error(f"Failed to index {paper_data['arxiv_id']}: {e}")
+            raise e
+
+    logger.success(f"Successfully indexed {len(paper_list)} papers to OpenSearch.")
+    return f"Indexed {len(paper_list)} papers"

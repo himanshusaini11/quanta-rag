@@ -1,12 +1,13 @@
 """
-Quanta-RAG Paper Ingestion DAG (Phase 2 - Fixed)
+Quanta-RAG Paper Ingestion DAG (Phase 3 - with OpenSearch Integration)
 
 This DAG orchestrates the daily ingestion of Agentic RAG papers:
-0. Initialize database and create tables (NEW - CRITICAL!)
+0. Initialize database and create tables
 1. Fetch metadata from Arxiv
 2. Check idempotency (filter existing papers)
 3. Download and parse PDFs in parallel (Dynamic Task Mapping)
 4. Store parsed content to PostgreSQL
+5. Index papers to OpenSearch for keyword search (NEW - Phase 3)
 """
 import sys
 import os
@@ -24,7 +25,8 @@ from tasks.ingestion_tasks import (
     fetch_metadata_task,
     check_idempotency_task,
     download_and_parse_task,
-    store_to_db_task
+    store_to_db_task,
+    index_papers_task
 )
 
 
@@ -43,11 +45,11 @@ default_args = {
 with DAG(
     dag_id='ingest_papers_dag',
     default_args=default_args,
-    description='Daily ingestion of Agentic RAG research papers',
+    description='Daily ingestion of Agentic RAG papers with OpenSearch indexing',
     schedule_interval='@daily',
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=['ingestion', 'arxiv', 'agentic-rag', 'phase2'],
+    tags=['ingestion', 'arxiv', 'agentic-rag', 'opensearch', 'phase3'],
     max_active_runs=1,
 ) as dag:
     
@@ -60,7 +62,7 @@ with DAG(
     # Step 0: Initialize database (CREATE TABLES FIRST!)
     @task
     def init_db():
-        """Initialize database and create all tables - MUST run before check_idempotency"""
+        """Initialize database and create all tables"""
         return init_db_task()
     
     # Step 1: Fetch metadata from Arxiv
@@ -79,7 +81,11 @@ with DAG(
         return check_idempotency_task(papers=papers)
     
     # Step 3: Download and parse PDFs (Dynamic Task Mapping)
-    @task
+    @task(
+            max_active_tis_per_dag=1,  # FORCE: Only 1 PDF parser runs at a time
+            retries=3,
+            retry_delay=timedelta(seconds=30)
+        ) # type: ignore
     def download_and_parse(paper):
         """Download PDF and parse with Docling"""
         return download_and_parse_task(paper=paper)
@@ -89,6 +95,15 @@ with DAG(
     def store_to_db(data):
         """Store parsed content to PostgreSQL"""
         return store_to_db_task(data=data)
+    
+    # Step 5: Index papers to OpenSearch (PHASE 3 - NEW!)
+    @task(
+            retries=5, 
+            retry_delay=timedelta(minutes=1) # Give OpenSearch time to wake up
+         ) # type: ignore
+    def index_papers():
+        """Index all papers to OpenSearch for keyword search"""
+        return index_papers_task()
     
     # End marker
     end = EmptyOperator(
@@ -108,5 +123,8 @@ with DAG(
     # Store each processed paper to database in parallel
     stored = store_to_db.expand(data=processed_data)
     
-    # Define dependencies - CRITICAL: init_db MUST run before check_idempotency
-    start >> db_ready >> papers >> new_papers >> processed_data >> stored >> end
+    # Index all papers to OpenSearch
+    indexed = index_papers()
+    
+    # Define dependencies - NEW: added index_papers after stored
+    start >> db_ready >> papers >> new_papers >> processed_data >> stored >> indexed >> end

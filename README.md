@@ -6,23 +6,27 @@ An Autonomous Research Agent that accelerates scientific discovery. Ingests real
 
 ## Project Status
 
-### Phase 1: Data Ingestion Pipeline
+### Phase 1: Data Ingestion Pipeline - ✅ Complete
 - **Architecture:** Apache Airflow + PostgreSQL
 - Modular project structure
-- Docker-based infrastructure (Airflow, PostgreSQL, Qdrant)
-- PostgreSQL with SQLAlchemy ORM
-- Airflow DAGs for orchestrated ingestion
+- Docker-based infrastructure
 - Production-ready with observability and retries
 
-### Phase 2: Text Processing & Embeddings - 📋 Planned
-- PDF text extraction
-- Sentence embedding generation
-- Vector storage in Qdrant
+### Phase 2: Text Processing - ✅ Complete
+- Docling PDF parsing with structure preservation
+- PostgreSQL storage of full_text and sections
+- Dynamic task mapping for parallel processing
 
-### Phase 3: RAG Pipeline - 📋 Planned
-- Hybrid search (semantic + keyword)
+### Phase 3: Keyword Search - ✅ Active
+- **OpenSearch** for BM25 keyword retrieval
+- Self-healing index creation
+- Automated indexing via Airflow
+- **5 papers indexed and searchable**
+
+### Phase 4: Hybrid Search - 📋 Planned
+- Semantic search with Qdrant + embeddings
+- Hybrid retrieval (BM25 + semantic)
 - LLM integration for answer generation
-- Citation tracking
 
 ---
 

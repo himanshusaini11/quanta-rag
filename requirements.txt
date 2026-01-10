@@ -11,3 +11,4 @@ pydantic
 docling
 tenacity
 minio
+opensearch-py

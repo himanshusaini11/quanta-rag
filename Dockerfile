@@ -27,3 +27,6 @@ RUN pip install --no-cache-dir \
     docling \
     tenacity \
     requests
+
+# Install the "heavy" scientific libraries last
+RUN pip install --no-cache-dir docling opensearch-py
