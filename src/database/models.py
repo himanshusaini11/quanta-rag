@@ -30,6 +30,10 @@ class Paper(Base):
     # File storage
     pdf_path = Column(String(500), nullable=True)
     
+    # Parsed content (Phase 2)
+    full_text = Column(Text, nullable=True)
+    sections_json = Column(Text, nullable=True)  # JSON string of sections
+    
     # Temporal metadata
     published_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -52,6 +56,8 @@ class Paper(Base):
             'title': self.title,
             'summary': self.summary,
             'pdf_path': self.pdf_path,
+            'full_text': self.full_text,
+            'sections_json': self.sections_json,
             'published_date': self.published_date.isoformat() if self.published_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

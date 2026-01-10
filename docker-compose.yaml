@@ -2,7 +2,8 @@ version: '3.8'
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.8.0-python3.10
+  # image: apache/airflow:2.8.0-python3.10  <-- DELETE THIS LINE
+  build: .                                    # <-- ADD THIS LINE
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -12,7 +13,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     DATABASE_URL: postgresql://quanta:quanta@postgres:5432/quanta_rag
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- arxiv pypdf aiohttp python-dotenv loguru tqdm psycopg2-binary sqlalchemy pydantic}
+    # _PIP_ADDITIONAL_REQUIREMENTS: ...       <-- DELETE THIS LINE
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
